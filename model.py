@@ -114,9 +114,10 @@ class AE_DCASEBaseline(nn.Module):
     
 ##### WAVEGRAM + MEL SPEC + ATTENTION MODULE + MOBILENETV2
 class Wavegram_AttentionModule(nn.Module):
-    def __init__(self, h):
+    def __init__(self, h, num_classes):
         super(Wavegram_AttentionModule, self).__init__()
         self.h = h
+        self.num_classes = num_classes
         # sep-wavegram
         self.wavegram = sep.SeparableConv1d(in_channels = 1, out_channels = 128, kernel_size = 1024, stride = 512, padding = 512)
         # Mel filterbank
@@ -146,8 +147,8 @@ class Wavegram_AttentionModule(nn.Module):
                 nn.Sigmoid()
             ) 
         # classifier
-        self.classifier = MobileFaceNet(num_class = 41)
-        self.arcface = ArcMarginProduct(in_features = self.h, out_features = 41, s = 40, m = 0.7)
+        self.classifier = MobileFaceNet(num_class = self.num_classes)
+        self.arcface = ArcMarginProduct(in_features = self.h, out_features = num_classes, s = 40, m = 0.7)
     
     def forward(self, x, metadata):
         # compute mel spectrogram
@@ -166,15 +167,17 @@ class Wavegram_AttentionModule(nn.Module):
 
 class Wavegram_AttentionMap(LightningModule):
 
-    def __init__(self, h, lr):
+    def __init__(self, h, lr, num_classes):
         super().__init__()
         self.h = h
-        self.model = Wavegram_AttentionModule(self.h)
         self.lr = lr
+        self.num_classes = num_classes
 
-        self.accuracy_training = Accuracy(task="multiclass", num_classes=41)
-        self.accuracy_val = Accuracy(task="multiclass", num_classes=41)
-        self.accuracy_test = Accuracy(task="multiclass", num_classes=41)
+        self.model = Wavegram_AttentionModule(self.h, self.num_classes)
+   
+        self.accuracy_training = Accuracy(task="multiclass", num_classes=num_classes)
+        self.accuracy_val = Accuracy(task="multiclass", num_classes=num_classes)
+        self.accuracy_test = Accuracy(task="multiclass", num_classes=num_classes)
         self.criterion = nn.CrossEntropyLoss()
         # to save threshold and errors at init
         self.errors_list = []
@@ -184,7 +187,7 @@ class Wavegram_AttentionMap(LightningModule):
         self.classes = []
     
     def mixup_data(self, x, y, alpha=0.2):
-        y = torch.nn.functional.one_hot(y, num_classes = 41)
+        y = torch.nn.functional.one_hot(y, num_classes = self.num_classes)
         if alpha > 0:
             lam = np.random.beta(alpha, alpha)
         else:
@@ -205,13 +208,11 @@ class Wavegram_AttentionMap(LightningModule):
     
     def training_step(self, batch, batch_idx):
         x, metadata, _, _ = batch
-        # for training step
-        mixed_x, y_a, y_b, lam = self.mixup_data(x, metadata)
-        predicted, _, _, _, _ = self.forward(mixed_x, metadata)
-        loss = self.mixup_criterion_arcmix(predicted, y_a, y_b, lam)
-        self.log("train/loss_class", loss, on_epoch = True, on_step = True, prog_bar = True)
-        self.accuracy_training(predicted, metadata)
-        self.log("train/acc", self.accuracy_training, on_epoch = True, on_step = False)
+        predicted, _, _, _, _ = self.forward(x, metadata)
+        loss = torch.nn.functional.cross_entropy(predicted, metadata, reduction="mean")
+        acc = self.accuracy_training(predicted, metadata)
+        self.log("train_loss", loss, prog_bar=True)
+        self.log("train_acc", acc, prog_bar=True)
         return loss
     
     def validation_step(self, batch, batch_idx):
@@ -253,7 +254,7 @@ class Wavegram_AttentionMap(LightningModule):
 # TEST FUNCTION
 if __name__ == "__main__":
     example_input = torch.rand(16, 160000) # dummy audio
-    model = Wavegram_AttentionModule()
+    model = Wavegram_AttentionModule(num_classes=41)
     metadata = torch.nn.functional.one_hot(torch.randint(low = 0, high = 41, size =(16,)), num_classes=41)
     output = model(example_input, metadata)
     print(output)
