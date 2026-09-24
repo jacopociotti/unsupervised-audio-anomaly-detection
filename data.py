@@ -118,14 +118,7 @@ class MIMIIDataset(Dataset):
 
 
 class MIMIIDataModule(LightningDataModule):
-    def __init__(
-        self,
-        path_data,
-        sample_rate=16000,
-        duration=10,
-        batch_size=64,
-        num_channels=1
-    ):
+    def __init__(self, path_data, sample_rate=16000, duration=10, batch_size=64, num_channels=1):
         super().__init__()
 
         self.path_data = Path(path_data)
