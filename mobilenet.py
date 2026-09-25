@@ -62,10 +62,11 @@ Mobilefacenet_bottleneck_setting = [
 class MobileFaceNet(nn.Module):
     def __init__(self,
                  num_class,
-                 bottleneck_setting=Mobilefacenet_bottleneck_setting):
+                 bottleneck_setting=Mobilefacenet_bottleneck_setting,
+                 input_channels = 2):
         super(MobileFaceNet, self).__init__()
 
-        self.conv1 = ConvBlock(2, 64, 3, 2, 1)
+        self.conv1 = ConvBlock(input_channels, 64, 3, 2, 1)
 
         self.dw_conv1 = ConvBlock(64, 64, 3, 1, 1, dw=True)
 

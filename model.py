@@ -114,10 +114,12 @@ class AE_DCASEBaseline(nn.Module):
     
 ##### WAVEGRAM + MEL SPEC + ATTENTION MODULE + MOBILENETV2
 class Wavegram_AttentionModule(nn.Module):
-    def __init__(self, h, num_classes):
+    def __init__(self, h, num_classes, num_channels = 1):
         super(Wavegram_AttentionModule, self).__init__()
         self.h = h
         self.num_classes = num_classes
+        self.num_channels = num_channels
+        self.feature_channels = 2 * self.num_channels
         # sep-wavegram
         self.wavegram = sep.SeparableConv1d(in_channels = 1, out_channels = 128, kernel_size = 1024, stride = 512, padding = 512)
         # Mel filterbank
@@ -135,7 +137,7 @@ class Wavegram_AttentionModule(nn.Module):
                                                 
         # attention module
         self.heatmap = nn.Sequential(
-                sep.SeparableConv2d(in_channels = 2, out_channels = 16,
+                sep.SeparableConv2d(in_channels = self.feature_channels, out_channels = 16,
                          kernel_size = (3,3), padding = "same", bias = False),
                 nn.BatchNorm2d(16),
                 nn.ELU(),
@@ -143,37 +145,80 @@ class Wavegram_AttentionModule(nn.Module):
                         kernel_size = (3,3), padding = "same", bias = False),
                 nn.BatchNorm2d(64),
                 nn.ELU(),
-                sep.SeparableConv2d(in_channels = 64, out_channels = 2, kernel_size = 1, padding = "same"),
+                sep.SeparableConv2d(in_channels = 64, out_channels = self.feature_channels, kernel_size = 1, padding = "same"),
                 nn.Sigmoid()
             ) 
         # classifier
-        self.classifier = MobileFaceNet(num_class = self.num_classes)
+        self.classifier = MobileFaceNet(num_class = self.num_classes, input_channels = self.feature_channels)
         self.arcface = ArcMarginProduct(in_features = self.h, out_features = num_classes, s = 40, m = 0.7)
+
+    def extract_features(self, x):
+        # Baseline: [B, N] -> [B, 1, N]
+        if x.dim() == 2:
+            x = x.unsqueeze(1)
+
+        # Multichannel: [B, C, N]
+        if x.dim() != 3:
+            raise ValueError(f"Input atteso [B, N] oppure [B, C, N], ricevuto {x.shape}")
+
+        batch_size, num_channels, num_samples = x.shape
+
+        if num_channels != self.num_channels:
+            raise ValueError(f"Il modello è configurato per {self.num_channels} canali, "f"ma l'input ne contiene {num_channels}")
+
+        # ----- Log-Mel -----
+        # torchaudio mantiene le dimensioni iniziali:
+        # [B, C, N] -> [B, C, 128, 313]
+        x_spec = self.transform_tf(x)
+        x_spec = 10 * torch.log10(x_spec + 1e-8)
+
+        # ----- Wavegram -----
+        # La Wavegram originale accetta un solo canale alla volta.
+        # Trattiamo quindi ogni microfono come un elemento indipendente del batch.
+        x_wave = x.reshape(batch_size * num_channels, 1, num_samples)
+
+        x_wave = self.wavegram(x_wave)
+
+        # [B*C, 128, 313] -> [B, C, 128, 313]
+        x_wave = x_wave.reshape(batch_size, num_channels, x_wave.shape[-2], x_wave.shape[-1])
+
+        # Per ogni microfono manteniamo la coppia:
+        # log-Mel + Wavegram
+        #
+        # [B,C,F,T] + [B,C,F,T]
+        #       ↓
+        # [B,C,2,F,T]
+        x = torch.stack((x_spec, x_wave), dim=2)
+
+        # [B,C,2,F,T] -> [B,2C,F,T]
+        x = x.reshape(batch_size, 2 * num_channels, x.shape[-2], x.shape[-1])
+
+        return x
     
     def forward(self, x, metadata):
-        # compute mel spectrogram
-        x_spec = self.transform_tf(x)
-        x_spec = 10*torch.log10(x_spec + 1e-8)
-        # compute wavegram
-        x = x.unsqueeze(1)
-        x = self.wavegram(x)
-        x = torch.stack((x_spec, x), dim = 1)
+        # Estrazione Mel + Wavegram per tutti i microfoni
+        x = self.extract_features(x)
+        # Salviamo la rappresentazione prima dell'attention 
         reppr = x
+        # Attention
         heatmap = self.heatmap(x)
         x = x * heatmap
+        # MobileFaceNet
         out, features = self.classifier(x)
+        # ArcFace
         x = self.arcface(features, metadata)
         return x, out, reppr, features, heatmap
 
 class Wavegram_AttentionMap(LightningModule):
 
-    def __init__(self, h, lr, num_classes):
+    def __init__(self, h, lr, num_classes, num_channels = 1):
         super().__init__()
         self.h = h
         self.lr = lr
         self.num_classes = num_classes
+        self.num_channels = num_channels
 
-        self.model = Wavegram_AttentionModule(self.h, self.num_classes)
+        self.model = Wavegram_AttentionModule(self.h, self.num_classes, self.num_channels)
    
         self.accuracy_training = Accuracy(task="multiclass", num_classes=num_classes)
         self.accuracy_val = Accuracy(task="multiclass", num_classes=num_classes)
@@ -254,7 +299,7 @@ class Wavegram_AttentionMap(LightningModule):
 # TEST FUNCTION
 if __name__ == "__main__":
     example_input = torch.rand(16, 160000) # dummy audio
-    model = Wavegram_AttentionModule(num_classes=41)
+    model = Wavegram_AttentionModule(num_classes=41, num_channels=1)
     metadata = torch.nn.functional.one_hot(torch.randint(low = 0, high = 41, size =(16,)), num_classes=41)
     output = model(example_input, metadata)
     print(output)
