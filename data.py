@@ -68,11 +68,12 @@ class TUTDataset(Dataset):
 # Nuova classe per il dataset MIMII, che gestisce i file audio con più canali e assegna etichette basate sulla presenza di "normal" nel nome del file.
 class MIMIIDataset(Dataset):
 
-    def __init__(self, list_files, sample_rate=16000, duration=10, num_channels=1):
+    def __init__(self, list_files, sample_rate=16000, duration=10, num_channels=1, spatial_augmentation=False):
         self.list_files = list_files
         self.sample_rate = sample_rate
         self.duration = duration
         self.num_channels = num_channels
+        self.spatial_augmentation = spatial_augmentation
         if self.num_channels not in MIMII_CHANNEL_SELECTIONS:
             raise ValueError(f"num_channels deve essere 1, 4 oppure 8, ricevuto: {self.num_channels}")
 
@@ -90,6 +91,12 @@ class MIMIIDataset(Dataset):
 
         # Seleziona i canali desiderati
         audio_data = audio_data[self.channel_indices, :]
+
+        # Spatial augmentation: random cyclic rotation dei microfoni
+        # Solo durante il training e solo per configurazioni multicanale.
+        if self.spatial_augmentation and self.num_channels > 1:
+            shift = np.random.randint(0, self.num_channels)
+            audio_data = np.roll(audio_data, shift=shift, axis=0)
 
         if self.num_channels == 1:
             audio_data = audio_data[0]
@@ -128,9 +135,9 @@ class MIMIIDataset(Dataset):
     def __len__(self):
         return len(self.list_files)
 
-
 class MIMIIDataModule(LightningDataModule):
-    def __init__(self, path_data, sample_rate=16000, duration=10, batch_size=64, num_channels=1):
+
+    def __init__(self, path_data, sample_rate=16000, duration=10, batch_size=64, num_channels=1, spatial_augmentation=False):
         super().__init__()
 
         self.path_data = Path(path_data)
@@ -138,6 +145,7 @@ class MIMIIDataModule(LightningDataModule):
         self.duration = duration
         self.batch_size = batch_size
         self.num_channels = num_channels
+        self.spatial_augmentation = spatial_augmentation
 
         self.train_list = []
         self.val_list = []
@@ -196,7 +204,8 @@ class MIMIIDataModule(LightningDataModule):
             self.train_list,
             sample_rate=self.sample_rate,
             duration=self.duration,
-            num_channels=self.num_channels
+            num_channels=self.num_channels,
+            spatial_augmentation=self.spatial_augmentation
         )
 
         return DataLoader(
@@ -210,7 +219,8 @@ class MIMIIDataModule(LightningDataModule):
             self.val_list,
             sample_rate=self.sample_rate,
             duration=self.duration,
-            num_channels=self.num_channels
+            num_channels=self.num_channels,
+            spatial_augmentation=False
         )
 
         return DataLoader(
@@ -224,7 +234,8 @@ class MIMIIDataModule(LightningDataModule):
             self.test_list,
             sample_rate=self.sample_rate,
             duration=self.duration,
-            num_channels=self.num_channels
+            num_channels=self.num_channels,
+            spatial_augmentation=False
         )
 
         return DataLoader(
