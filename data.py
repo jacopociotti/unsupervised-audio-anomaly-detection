@@ -24,6 +24,12 @@ MIMII_IDS = {
     "06": 3,
 }
 
+MIMII_CHANNEL_SELECTIONS = {
+    1: [0],
+    4: [0, 2, 4, 6],
+    8: [0, 1, 2, 3, 4, 5, 6, 7],
+}
+
 class TUTDataset(Dataset):
 
     def __init__(self, path_data, list_files, sample_rate, duration):
@@ -67,6 +73,10 @@ class MIMIIDataset(Dataset):
         self.sample_rate = sample_rate
         self.duration = duration
         self.num_channels = num_channels
+        if self.num_channels not in MIMII_CHANNEL_SELECTIONS:
+            raise ValueError(f"num_channels deve essere 1, 4 oppure 8, ricevuto: {self.num_channels}")
+
+        self.channel_indices = MIMII_CHANNEL_SELECTIONS[self.num_channels]
 
     def __getitem__(self, index):
         file_name = self.list_files[index]
@@ -78,7 +88,9 @@ class MIMIIDataset(Dataset):
         max_samples = int(self.duration * self.sample_rate)
         audio_data = audio_data[:, :max_samples]
 
-        # Per ora lavoriamo SOLO sulla baseline a 1 canale
+        # Seleziona i canali desiderati
+        audio_data = audio_data[self.channel_indices, :]
+
         if self.num_channels == 1:
             audio_data = audio_data[0]
 
