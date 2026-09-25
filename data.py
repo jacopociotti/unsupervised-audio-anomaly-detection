@@ -211,7 +211,8 @@ class MIMIIDataModule(LightningDataModule):
         return DataLoader(
             dataset,
             batch_size=self.batch_size,
-            shuffle=True
+            shuffle=True,
+            drop_last=True
         )
 
     def val_dataloader(self):
