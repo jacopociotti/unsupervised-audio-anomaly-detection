@@ -4,7 +4,7 @@ import numpy as np
 from optparse import OptionParser
 from sklearn import metrics
 
-from pytorch_lightning import Trainer
+from pytorch_lightning import Trainer, seed_everything
 from pytorch_lightning.callbacks import ModelCheckpoint
 
 from data import MIMIIDataModule
@@ -12,6 +12,8 @@ from model import Wavegram_AttentionMap
 
 
 def train(configs):
+
+    seed_everything(configs.seed, workers=True)
 
     datamodule = MIMIIDataModule(
         path_data=configs.path_data,
@@ -70,6 +72,8 @@ def evaluate(model, trainer, datamodule):
 
     labels = torch.cat([x.detach().cpu() for x in model.labels]).numpy()
 
+    classes = torch.cat([x.detach().cpu() for x in model.classes]).numpy()
+
     ############
     unique_labels = np.unique(labels)
 
@@ -99,14 +103,45 @@ def evaluate(model, trainer, datamodule):
     print(f"AUC:  {auc:.4f}")
     print(f"pAUC: {pauc:.4f}")
 
-    return auc, pauc
+    machine_ranges = {
+    "Fan": (0, 4),
+    "Pump": (4, 8),
+    "Slider": (8, 12),
+    "Valve": (12, 16),
+    }
+
+    print("\n----- RESULTS BY MACHINE -----")
+
+    for machine, (start, end) in machine_ranges.items():
+
+        mask = (classes >= start) & (classes < end)
+
+        machine_labels = labels[mask]
+        machine_errors = errors[mask]
+
+        if len(np.unique(machine_labels)) < 2:
+            print(f"{machine}: AUC/pAUC non calcolabili")
+            continue
+
+        machine_auc = metrics.roc_auc_score(machine_labels, machine_errors)
+
+        machine_pauc = metrics.roc_auc_score(machine_labels, machine_errors, max_fpr=0.1)
+
+        print(f"{machine}: "f"AUC={machine_auc:.4f}, "f"pAUC={machine_pauc:.4f}, "f"N={len(machine_labels)}")
+
+        return auc, pauc
 
 if __name__ == "__main__":
+
+    num_classes = 16
+    path_data = r"D:\jacopo\dataset_0dB"
+
     parser = OptionParser()
-    parser.add_option("--path_data", type="string", default=r"C:\Users\jacop\OneDrive\Desktop\DACLS\Code\dataset")
+    parser.add_option("--seed", type="int", default=42)
+    parser.add_option("--path_data", type="string", default=path_data)
     parser.add_option("--num_channels", type="int", default=1)
     parser.add_option("--spatial_augmentation", action="store_true", default=False)
-    parser.add_option("--num_classes", type="int", default=4)
+    parser.add_option("--num_classes", type="int", default=num_classes)
     parser.add_option("--batch_size", type="int", default=2)
     parser.add_option("--epochs", type="int", default=1)
     parser.add_option("--lr", type="float", default=0.0001)
@@ -114,6 +149,7 @@ if __name__ == "__main__":
     parser.add_option("--duration", type="int", default=10)
     configs, _ = parser.parse_args()
     print("----- MIMII experiment -----")
+    print("Seed:", configs.seed)
     print("Dataset:", configs.path_data)
     print("Channels:", configs.num_channels)
     print("Spatial augmentation:", configs.spatial_augmentation)
