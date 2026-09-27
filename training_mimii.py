@@ -129,7 +129,7 @@ def evaluate(model, trainer, datamodule):
 
         print(f"{machine}: "f"AUC={machine_auc:.4f}, "f"pAUC={machine_pauc:.4f}, "f"N={len(machine_labels)}")
 
-        return auc, pauc
+    return auc, pauc
 
 if __name__ == "__main__":
 
@@ -143,7 +143,7 @@ if __name__ == "__main__":
     parser.add_option("--spatial_augmentation", action="store_true", default=False)
     parser.add_option("--num_classes", type="int", default=num_classes)
     parser.add_option("--batch_size", type="int", default=2)
-    parser.add_option("--epochs", type="int", default=1)
+    parser.add_option("--epochs", type="int", default=10)
     parser.add_option("--lr", type="float", default=0.0001)
     parser.add_option( "--sr", type="int", default=16000)
     parser.add_option("--duration", type="int", default=10)
