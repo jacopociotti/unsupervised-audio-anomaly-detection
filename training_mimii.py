@@ -5,7 +5,7 @@ from optparse import OptionParser
 from sklearn import metrics
 
 from pytorch_lightning import Trainer, seed_everything
-from pytorch_lightning.callbacks import ModelCheckpoint
+from pytorch_lightning.callbacks import ModelCheckpoint, EarlyStopping
 
 from data import MIMIIDataModule
 from model import Wavegram_AttentionMap
@@ -41,11 +41,18 @@ def train(configs):
         auto_insert_metric_name=False
     )
 
+    early_stopping = EarlyStopping(
+        monitor="val/loss_class",
+        patience=10,
+        mode="min",
+        verbose=True
+    )
+
     trainer = Trainer(
         accelerator="gpu",
         devices=1,
         max_epochs=configs.epochs,
-        callbacks=[checkpoint_callback]
+        callbacks=[checkpoint_callback, early_stopping]
     )
 
     trainer.fit(model, datamodule=datamodule)
@@ -63,8 +70,7 @@ def evaluate(model, trainer, datamodule):
     model.labels = []
     model.classes = []
 
-    # Usa automaticamente il miglior checkpoint
-    # selezionato sulla validation
+    # Usa automaticamente il miglior checkpoint selezionato sulla validation
     trainer.test(model, datamodule=datamodule, ckpt_path="best")
 
     # Concatena tutti i batch del test
