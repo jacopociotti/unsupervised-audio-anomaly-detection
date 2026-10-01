@@ -174,7 +174,7 @@ class Wavegram_AttentionModule(nn.Module):
 
         # ----- Wavegram -----
         # La Wavegram originale accetta un solo canale alla volta.
-        # Trattiamo quindi ogni microfono come un elemento indipendente del batch.
+        # Ogni microfono viene trattato come un elemento indipendente del batch.
         x_wave = x.reshape(batch_size * num_channels, 1, num_samples)
 
         x_wave = self.wavegram(x_wave)
@@ -182,7 +182,7 @@ class Wavegram_AttentionModule(nn.Module):
         # [B*C, 128, 313] -> [B, C, 128, 313]
         x_wave = x_wave.reshape(batch_size, num_channels, x_wave.shape[-2], x_wave.shape[-1])
 
-        # Per ogni microfono manteniamo la coppia:
+        # Per ogni microfono si mantiene la coppia:
         # log-Mel + Wavegram
         #
         # [B,C,F,T] + [B,C,F,T]
@@ -231,25 +231,25 @@ class Wavegram_AttentionMap(LightningModule):
         self.labels = []
         self.classes = []
     
-    def mixup_data(self, x, y, alpha=0.2):
-        y = torch.nn.functional.one_hot(y, num_classes = self.num_classes)
-        if alpha > 0:
-            lam = np.random.beta(alpha, alpha)
-        else:
-            lam = 1
-        batch_size = x.size()[0]
-        index = torch.randperm(batch_size)
-        mixed_x = lam * x + (1 - lam) * x[index, :]
-        y_a, y_b = y, y[index]
-        return mixed_x, y_a.float(), y_b.float(), lam
+    # def mixup_data(self, x, y, alpha=0.2):
+    #     y = torch.nn.functional.one_hot(y, num_classes = self.num_classes)
+    #     if alpha > 0:
+    #         lam = np.random.beta(alpha, alpha)
+    #     else:
+    #         lam = 1
+    #     batch_size = x.size()[0]
+    #     index = torch.randperm(batch_size)
+    #     mixed_x = lam * x + (1 - lam) * x[index, :]
+    #     y_a, y_b = y, y[index]
+    #     return mixed_x, y_a.float(), y_b.float(), lam
 
     def forward(self, x, labels):
         return self.model(x, labels)
         
-    def mixup_criterion_arcmix(self, pred, y_a, y_b, lam):
-        loss1 = lam * self.criterion(pred, y_a)
-        loss2 = (1 - lam) * self.criterion(pred, y_b)
-        return loss1+loss2
+    # def mixup_criterion_arcmix(self, pred, y_a, y_b, lam):
+    #     loss1 = lam * self.criterion(pred, y_a)
+    #     loss2 = (1 - lam) * self.criterion(pred, y_b)
+    #     return loss1+loss2
     
     def training_step(self, batch, batch_idx):
         x, metadata, _, _ = batch
