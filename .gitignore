@@ -164,3 +164,4 @@ cython_debug/
 # Training outputs
 best_models/*.ckpt
 lightning_logs/
+best_models/
