@@ -162,6 +162,6 @@ cython_debug/
 #.idea/
 
 # Training outputs
-best_models/*.ckpt
-lightning_logs/
-best_models/
+# best_models/*.ckpt
+# lightning_logs/
+# best_models/
