@@ -1,6 +1,8 @@
 import torch
 import numpy as np
 
+from pathlib import Path
+
 from optparse import OptionParser
 from sklearn import metrics
 
@@ -12,6 +14,18 @@ from model import Wavegram_AttentionMap
 
 
 def train(configs):
+
+    if configs.num_channels == 1:
+        experiment_name = "1ch"
+    else:
+        spatial_name = "si_spatial" if configs.spatial_augmentation else "no_spatial"
+        experiment_name = f"{configs.num_channels}ch_{spatial_name}"
+
+    output_dir = Path(configs.output_dir) / experiment_name
+    checkpoint_dir = output_dir / "best_models"
+
+    output_dir.mkdir(parents=True, exist_ok=True)
+    checkpoint_dir.mkdir(parents=True, exist_ok=True)
 
     seed_everything(configs.seed, workers=True)
 
@@ -32,7 +46,7 @@ def train(configs):
     )
 
     checkpoint_callback = ModelCheckpoint(
-        dirpath="best_models/",
+        dirpath=str(checkpoint_dir),
         filename=(f"mimii-{configs.num_channels}ch-"f"aug{int(configs.spatial_augmentation)}-""{epoch:02d}-{val/loss_class:.4f}"),
         monitor="val/loss_class",
         mode="min",
@@ -52,16 +66,17 @@ def train(configs):
         accelerator="gpu",
         devices=1,
         max_epochs=configs.epochs,
-        callbacks=[checkpoint_callback, early_stopping]
+        callbacks=[checkpoint_callback, early_stopping],
+        default_root_dir=str(output_dir)
     )
 
     trainer.fit(model, datamodule=datamodule)
 
     print("Best checkpoint:", checkpoint_callback.best_model_path)
 
-    return model, trainer, datamodule, checkpoint_callback
+    return model, trainer, datamodule, checkpoint_callback, output_dir
 
-def evaluate(model, trainer, datamodule):
+def evaluate(model, trainer, datamodule, configs, checkpoint_callback, output_dir):
 
     # Puliamo eventuali risultati precedenti
     model.errors_list = []
@@ -116,6 +131,8 @@ def evaluate(model, trainer, datamodule):
     "Valve": (12, 16),
     }
 
+    machine_results = {}
+
     print("\n----- RESULTS BY MACHINE -----")
 
     for machine, (start, end) in machine_ranges.items():
@@ -133,18 +150,65 @@ def evaluate(model, trainer, datamodule):
 
         machine_pauc = metrics.roc_auc_score(machine_labels, machine_errors, max_fpr=0.1)
 
+        machine_results[machine] = {"auc": machine_auc, "pauc": machine_pauc, "n": len(machine_labels)}
+
         print(f"{machine}: "f"AUC={machine_auc:.4f}, "f"pAUC={machine_pauc:.4f}, "f"N={len(machine_labels)}")
+
+    results_path = output_dir / "results.txt"
+
+    with open(results_path, "w") as f:
+
+       f.write("===== MIMII EXPERIMENT =====\n\n")
+
+       f.write("----- CONFIGURATION -----\n")
+       f.write(f"Dataset: {configs.path_data}\n")
+       f.write(f"Channels: {configs.num_channels}\n")
+       f.write(f"Spatial augmentation: "f"{configs.spatial_augmentation}\n")
+       f.write(f"Classes: {configs.num_classes}\n")
+       f.write(f"Batch size: {configs.batch_size}\n")
+       f.write(f"Epochs: {configs.epochs}\n")
+       f.write(f"Learning rate: {configs.lr}\n")
+       f.write(f"Seed: {configs.seed}\n")
+
+       f.write("\n----- CHECKPOINT -----\n")
+       f.write(f"Best checkpoint: "f"{checkpoint_callback.best_model_path}\n")
+       f.write(f"Best val/loss_class: "f"{checkpoint_callback.best_model_score}\n")
+
+       f.write("\n----- TEST METRICS -----\n")
+
+       if test_results:
+           for key, value in test_results[0].items():
+               f.write(f"{key}: {value}\n")
+
+       f.write("\n----- ANOMALY DETECTION -----\n")
+       f.write(f"Samples: {len(labels)}\n")
+       f.write(f"Normal: {(labels == 0).sum()}\n")
+       f.write(f"Abnormal: {(labels == 1).sum()}\n")
+       f.write(f"AUC: {auc:.4f}\n")
+       f.write(f"pAUC: {pauc:.4f}\n")
+
+       f.write("\n----- RESULTS BY MACHINE -----\n")
+
+       for machine, result in machine_results.items():
+
+           if result is None:
+               f.write(f"{machine}: "f"AUC/pAUC non calcolabili\n")
+           else:
+               f.write(f"{machine}: "f"AUC={result['auc']:.4f}, "f"pAUC={result['pauc']:.4f}, "f"N={result['n']}\n")
+
+    print(f"\nResults saved in: {results_path}")
 
     return auc, pauc
 
 if __name__ == "__main__":
 
     num_classes = 16
-    path_data = r"D:\jacopo\dataset_0dB"
+    # path_data = r"D:\jacopo\dataset_0dB"
 
     parser = OptionParser()
     parser.add_option("--seed", type="int", default=42)
-    parser.add_option("--path_data", type="string", default=path_data)
+    parser.add_option("--path_data", type="string", default=None)
+    parser.add_option("--output_dir", type="string", default="experiment_output")
     parser.add_option("--num_channels", type="int", default=1)
     parser.add_option("--spatial_augmentation", action="store_true", default=False)
     parser.add_option("--num_classes", type="int", default=num_classes)
@@ -165,6 +229,6 @@ if __name__ == "__main__":
     print("Learning rate:", configs.lr)
 
  
-    model, trainer, datamodule, checkpoint_callback = train(configs)
+    model, trainer, datamodule, checkpoint_callback, output_dir = train(configs)
 
-    evaluate(model, trainer, datamodule)
+    evaluate(model, trainer, datamodule, configs, checkpoint_callback, output_dir)
