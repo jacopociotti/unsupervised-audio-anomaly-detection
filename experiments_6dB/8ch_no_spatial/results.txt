@@ -16,4 +16,22 @@ Patience: 10
 Best checkpoint: experiments_6dB/8ch_no_spatial/best_models/mimii-8ch-aug0-18-0.0010.ckpt
 Best val/loss_class: 0.0010347191710025072
 
------ TEST METRICS -----
+
+----- TEST INFO -----                                                                                     
+Samples: 6258                                                                                             
+Normal: 2958                                                                                              
+Abnormal: 3300                                                                                            
+Labels presenti: [0 1]                                                                                    
+
+----- TEST RESULTS -----                                                                                  
+Samples: 6258                                                                                             
+Normal: 2958                                                                                              
+Abnormal: 3300                                                                                            
+AUC:  0.9505                                                                                              
+pAUC: 0.8994                                                                                              
+
+----- RESULTS BY MACHINE -----                                                                            
+Fan: AUC=0.9575, pAUC=0.9032, N=2293                                                                      
+Pump: AUC=0.9253, pAUC=0.8963, N=1209                                                                     
+Slider: AUC=0.9997, pAUC=0.9982, N=1536                                                                   
+Valve: AUC=0.9877, pAUC=0.9545, N=1220  
