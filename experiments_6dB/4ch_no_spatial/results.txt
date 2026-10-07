@@ -1,0 +1,31 @@
+===== MIMII EXPERIMENT =====
+
+----- CONFIGURATION -----
+Dataset: /disks/disk2/jciotti/DACLS/dataset_6dB
+Channels: 4
+Spatial augmentation: False
+Classes: 16
+Batch size: 32
+Epochs: 100
+Learning rate: 0.0001
+Early stopping: True
+Patience: 10
+Seed: 42
+
+----- CHECKPOINT -----
+Best checkpoint: experiments_6dB/4ch_no_spatial/best_models/mimii-4ch-aug0-50-0.0000.ckpt
+Best val/loss_class: 4.3566382373683155e-05
+
+----- TEST METRICS -----
+Samples: 6258                                                                                                                                                                                                                
+Normal: 2958                                                                                                                                                                                                                 
+Abnormal: 3300                                                                                                                                                                                                               
+AUC:  0.9237                                                                                                                                                                                                                 
+pAUC: 0.8609   
+
+----- RESULTS BY MACHINE -----                                                                                                                                                                                               
+Fan: AUC=0.9263, pAUC=0.8578, N=2293                                                                                                                                                                                         
+Pump: AUC=0.8930, pAUC=0.8749, N=1209                                                                                                                                                                                        
+Slider: AUC=1.0000, pAUC=0.9999, N=1536                                                                                                                                                                                      
+Valve: AUC=0.9735, pAUC=0.9325, N=1220
+

@@ -1,0 +1,19 @@
+===== MIMII EXPERIMENT =====
+
+----- CONFIGURATION -----
+Dataset: /disks/disk2/jciotti/DACLS/dataset_6dB
+Channels: 8
+Spatial augmentation: False
+Classes: 16
+Batch size: 32
+Epochs: 100
+Learning rate: 0.0001
+Seed: 42
+Early stopping: True
+Patience: 10
+
+----- CHECKPOINT -----
+Best checkpoint: experiments_6dB/8ch_no_spatial/best_models/mimii-8ch-aug0-18-0.0010.ckpt
+Best val/loss_class: 0.0010347191710025072
+
+----- TEST METRICS -----

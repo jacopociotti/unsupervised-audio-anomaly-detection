@@ -1,0 +1,26 @@
+===== MIMII EXPERIMENT =====
+
+----- CONFIGURATION -----
+Dataset: dataset_6dB
+Channels: 1
+Spatial augmentation: False
+Classes: 16
+Batch size: 32
+Epochs: 100
+Learning rate: 0.0001
+Early stopping: True
+Patience: 10
+Seed: 42
+
+----- TEST INFO -----
+Samples: 6258
+Normal: 2958
+Abnormal: 3300
+AUC: 0.9647
+pAUC: 0.8912
+
+----- RESULTS BY MACHINE -----
+Fan: AUC=0.9860, pAUC=0.9492, N=2293
+Pump: AUC=0.9345, pAUC=0.8995, N=1209
+Slider: AUC=0.9962, pAUC=0.9826, N=1536
+Valve: AUC=0.9555, pAUC=0.8602, N=1220

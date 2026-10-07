@@ -1,0 +1,34 @@
+===== MIMII EXPERIMENT =====
+
+----- CONFIGURATION -----
+Dataset: /disks/disk2/jciotti/DACLS/dataset_-6dB
+Channels: 4
+Spatial augmentation: False
+Classes: 16
+Batch size: 32
+Epochs: 100
+Learning rate: 0.0001
+Seed: 42
+Early stopping: True
+Patience: 10
+
+----- CHECKPOINT -----
+Best checkpoint: experiments_-6dB/4ch_no_spatial/best_models/mimii-4ch-aug0-51-0.0909.ckpt
+Best val/loss_class: 0.09086593985557556
+
+----- TEST METRICS -----
+test/loss_class: 10.225783348083496
+test/acc: 0.6681048274040222
+
+----- ANOMALY DETECTION -----
+Samples: 6258
+Normal: 2958
+Abnormal: 3300
+AUC: 0.8850
+pAUC: 0.8332
+
+----- RESULTS BY MACHINE -----
+Fan: AUC=0.8255, pAUC=0.7651, N=2293
+Pump: AUC=0.8628, pAUC=0.8066, N=1209
+Slider: AUC=0.9946, pAUC=0.9735, N=1536
+Valve: AUC=0.9796, pAUC=0.9302, N=1220

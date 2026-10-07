@@ -1,0 +1,30 @@
+===== MIMII EXPERIMENT =====
+
+----- CONFIGURATION -----
+Dataset: /disks/disk2/jciotti/DACLS/dataset_6dB
+Channels: 4
+Spatial augmentation: True
+Classes: 16
+Batch size: 32
+Epochs: 100
+Learning rate: 0.0001
+Seed: 42
+Early stopping: True
+Patience: 10
+
+----- CHECKPOINT -----
+Best checkpoint: experiments_6dB/4ch_si_spatial/best_models/mimii-4ch-aug1-40-0.0000.ckpt
+Best val/loss_class: 3.701667992572766e-06
+
+----- TEST RESULTS -----
+Samples: 6258
+Normal: 2958
+Abnormal: 3300
+AUC:  0.8922
+pAUC: 0.8538
+
+----- RESULTS BY MACHINE -----
+Fan: AUC=0.7326, pAUC=0.7159, N=2293
+Pump: AUC=0.9266, pAUC=0.9012, N=1209
+Slider: AUC=0.9995, pAUC=0.9976, N=1536
+Valve: AUC=0.9962, pAUC=0.9837, N=1220
