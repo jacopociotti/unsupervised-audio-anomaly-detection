@@ -1,0 +1,38 @@
+===== MIMII MULTI-SNR EXPERIMENT =====
+
+----- CONFIGURATION -----
+Training SNR: -6dB, 0dB, 6dB
+Dataset -6dB: /disks/disk2/jciotti/DACLS/dataset_-6dB
+Dataset 0dB: /disks/disk2/jciotti/DACLS/dataset_0dB
+Dataset 6dB: /disks/disk2/jciotti/DACLS/dataset_6dB
+Test SNR: -6dB
+Channels: 4
+Spatial augmentation: False
+Classes: 16
+Batch size: 32
+Epochs (maximum): 100
+Learning rate: 0.0001
+Seed: 42
+Early stopping: True
+Patience: 10
+
+----- CHECKPOINT -----
+Best checkpoint: experiments_multi_snr/4ch_no_spatial/best_models/mimii-mixedSNR-4ch-aug0-58-0.0149.ckpt
+Best val/loss_class: 0.014924383722245693
+
+----- TEST METRICS -----
+test/loss_class: 10.10733413696289
+test/acc: 0.7123681902885437
+
+----- ANOMALY DETECTION -----
+Samples: 6258
+Normal: 2958
+Abnormal: 3300
+AUC: 0.8713
+pAUC: 0.8389
+
+----- RESULTS BY MACHINE -----
+Fan: AUC=0.7982, pAUC=0.7808, N=2293
+Pump: AUC=0.8366, pAUC=0.7844, N=1209
+Slider: AUC=0.9873, pAUC=0.9692, N=1536
+Valve: AUC=0.9434, pAUC=0.9066, N=1220
